@@ -1,33 +1,48 @@
 package com.example.jsoup;
 
-import androidx.appcompat.app.AppCompatActivity;
-
-import android.content.Intent;
 import android.os.AsyncTask;
 import android.os.Bundle;
-import android.os.Handler;
 import android.text.method.ScrollingMovementMethod;
+import android.util.Log;
 import android.view.View;
+import android.webkit.JavascriptInterface;
+import android.webkit.WebView;
+import android.webkit.WebViewClient;
 import android.widget.Button;
 import android.widget.TextView;
 
-import org.jsoup.Jsoup;
+import androidx.appcompat.app.AppCompatActivity;
+
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
+import org.jsoup.parser.Parser;
 import org.jsoup.select.Elements;
-
-import java.io.IOException;
 
 public class MainActivity extends AppCompatActivity {
 
-    private String htmlPageUrl = "https://trends.google.com/trends/?geo=KR";
+    private String htmlPageUrl = "https://trends.google.co.kr/trends/trendingsearches/daily?geo=KR";
     private TextView textViewHtmlDocument;
     private String htmlContentInStringFormat;
+    private WebView webView;
+    private String source;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        webView = findViewById(R.id.webView);
+        webView.getSettings().setJavaScriptEnabled(true);
+        webView.addJavascriptInterface(new MyJavascriptInterface(), "Android");
+        webView.setWebViewClient(new WebViewClient() {
+            @Override
+            public void onPageFinished(WebView view, String url) {
+                super.onPageFinished(view, url);
+                view.loadUrl("javascript:window.Android.getHtml"
+                        + "(document.getElementsByTagName('body')[0].innerHTML);");
+            }
+        });
+        webView.loadUrl(htmlPageUrl);
 
         textViewHtmlDocument = findViewById(R.id.textView);
         textViewHtmlDocument.setMovementMethod(new ScrollingMovementMethod());
@@ -51,15 +66,17 @@ public class MainActivity extends AppCompatActivity {
         }
 
         @Override
-        protected Void doInBackground(Void... voids) {
+        protected Void doInBackground(Void... params) {
             try {
-                Document doc = Jsoup.connect(htmlPageUrl).get();
-                Elements links = doc.select(".list-item-title");
+                Document doc = Parser.parse(source, htmlPageUrl);
+                Elements links = doc.select("span[ng-repeat] span");
 
                 for (Element link : links) {
-                    htmlContentInStringFormat += link.text() + "\n";
+                    htmlContentInStringFormat += link.text().trim() + "\n";
                 }
-            } catch (IOException e) {
+            } catch (Exception e) {
+                htmlContentInStringFormat += "error" + "\n";
+                Log.d("error", "error");
                 e.printStackTrace();
             }
             return null;
@@ -71,4 +88,10 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    private class MyJavascriptInterface {
+        @JavascriptInterface
+        public void getHtml(String html) {
+            source = html;
+        }
+    }
 }
