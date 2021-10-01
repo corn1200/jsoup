@@ -94,4 +94,8 @@ public class MainActivity extends AppCompatActivity {
             source = html;
         }
     }
+
+    private class ExampleThread extends Thread {
+
+    }
 }
